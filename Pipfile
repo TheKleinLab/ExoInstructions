@@ -1,0 +1,21 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[[source]]
+name = "pylink"
+url = "https://pypi.sr-support.com"
+verify_ssl = true
+
+[dev-packages]
+pylint = "*"
+
+[packages]
+klibs = {file = "https://github.com/a-hurst/klibs/releases/download/0.7.7b1/klibs-0.7.7b1.tar.gz"}
+sr-research-pylink = {version="*", index="pylink"}
+
+[requires]
+python_version = "3.9"
+
+[scripts]

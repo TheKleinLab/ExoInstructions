@@ -17,7 +17,7 @@ from klibs.KLGraphics import KLDraw as kld
 from klibs.KLText import add_text_style
 from klibs.KLCommunication import message
 from klibs.KLEventQueue import pump
-from klibs.KLUserInterface import any_key, ui_request, smart_sleep, key_pressed, hide_cursor
+from klibs.KLUserInterface import any_key, ui_request, smart_sleep, key_pressed
 from klibs.KLResponseListeners import KeypressListener
 from klibs.KLTrialFactory import TrialIterator
 
@@ -28,9 +28,6 @@ BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 
-
-# TODO:
-# - Swap gaze check for saccade check for real Eyelink?
 
 
 class ExoInstructions(klibs.Experiment):
@@ -94,7 +91,6 @@ class ExoInstructions(klibs.Experiment):
         self.block_type = None
 
         self.was_practicing = False
-        hide_cursor()
         self.task_demo()
         self.practice_mapping()
 
@@ -211,6 +207,7 @@ class ExoInstructions(klibs.Experiment):
 
         # Reset trial variables
         self.looked_away = False
+        self.blinked = False
 
         # Perform drift correct before each trial
         self.el.drift_correct(target=self.fixation)
@@ -253,7 +250,10 @@ class ExoInstructions(klibs.Experiment):
                 feedback = message(int(rt), style=style)
             self.show_feedback(feedback, duration=1.0)
         else:
-            if self.looked_away:
+            if self.blinked:
+                feedback = message("Blinked!", style="err")
+                err = "blinked"
+            elif self.looked_away:
                 feedback = message("Looked away!", style="err")
                 err = "looked_away"
             else:
@@ -319,14 +319,29 @@ class ExoInstructions(klibs.Experiment):
             ui_request()
 
 
+    def _left_fixation(self, queue):
+        # Use gaze pos to check fixation when doing mouse simulation, since saccade
+        # simulation is currently wonky with trackpads & high-res displays
+        if "TryLink" in self.el.version:
+            return not self.el.within_boundary('fixation', EL_GAZE_POS)
+        return self.el.saccade_from_boundary('fixation', event_queue=queue)
+
+
     def check_fixation(self):
         # Recycles the trial if the participant looks away from fixation pre-target
-        if not self.el.within_boundary('fixation', EL_GAZE_POS):
-            #if self.el.saccade_from_boundary('fixation'):
+        eye_q = self.el.get_event_queue()
+        if self._left_fixation(eye_q):
             self.el.write("recycled (looked away)")
             msg = message("Looked away!", style='err')
             self.show_feedback(msg, duration=2.0)
             raise TrialException("looked away")
+        # Recycles the trial if the participant blinks pre-target
+        for e in eye_q:
+            if self.el.get_event_type(e) in (EL_BLINK_START, EL_BLINK_END):
+                self.el.write("recycled (blinked)")
+                msg = message("Blinked!", style='err')
+                self.show_feedback(msg, duration=2.0)
+                raise TrialException("blinked")
 
 
     def check_anticipatory(self):
@@ -345,10 +360,15 @@ class ExoInstructions(klibs.Experiment):
             self.draw_screen(cue_loc=self.cue_loc)
             self.target_off = True
         # Stop trial and show error if gaze leaves fixation before response
-        if not self.el.within_boundary('fixation', EL_GAZE_POS):
-            #if self.el.saccade_from_boundary('fixation'):
+        eye_q = self.el.get_event_queue()
+        if self._left_fixation(eye_q):
             self.looked_away = True
             return True
+        # Stop trial and show error if participant blinks
+        for e in eye_q:
+            if self.el.get_event_type(e) in (EL_BLINK_START, EL_BLINK_END):
+                self.blinked = True
+                return True
 
 
     def task_demo(self):
@@ -364,7 +384,7 @@ class ExoInstructions(klibs.Experiment):
                 layout.append((outer, self.stim_locs[loc]))
                 layout.append((inner, self.stim_locs[loc]))
             return layout
-        
+
         show_demo_text(
             "Welcome to the experiment! This tutorial will help explain the task."
         )
@@ -417,6 +437,11 @@ class ExoInstructions(klibs.Experiment):
         show_demo_text(
             ("The task is self-paced, so feel free to take a break between trials if "
              "you need one!"),
+            fixation, msg_y = int(P.screen_y * 0.35)
+        )
+        show_demo_text(
+            ("Additionally, please try to avoid blinking during trials as it "
+             "interferes\nwith eye tracking. Blinking *between* trials is encouraged."),
             fixation, msg_y = int(P.screen_y * 0.35)
         )
         show_demo_text(

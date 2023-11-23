@@ -98,8 +98,11 @@ class ExoInstructions(klibs.Experiment):
     def practice_mapping(self):
 
         last_loc = 'BL'
-        targets = ['T', 'F'] * 10
-        random.shuffle(targets)
+        targets = []
+        while len(targets) < 20:
+            tmp = ['T', 'F'] * 2
+            random.shuffle(tmp)
+            targets += tmp
         for target in targets:
             locs = list(self.stim_locs.keys())
             locs.remove(last_loc)

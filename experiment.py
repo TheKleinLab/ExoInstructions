@@ -27,6 +27,7 @@ WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
+PURPLE = (200, 128, 255)
 
 
 
@@ -42,6 +43,7 @@ class ExoInstructions(klibs.Experiment):
         circle_thickness = deg_to_px(0.1)
         target_size = deg_to_px(1.3)
         fixation_size = deg_to_px(0.2)
+        add_text_style('emph', size='0.52deg', font="Roboto-BoldItalic", color=PURPLE)
         add_text_style('target', size='0.6deg', color=WHITE)
         add_text_style('feedback', size='0.7deg', color=WHITE)
         add_text_style('err', size='0.7deg', color=RED)
@@ -454,10 +456,19 @@ class ExoInstructions(klibs.Experiment):
 
 
     def show_acc_instructions(self):
+        inst = message(
+            "Please try to respond as accurately as possible!", style="emph"
+        )
+        loc = (P.screen_c[0], int(P.screen_y * 0.32 + inst.height * 2))
+        loc_ul = (
+            P.screen_c[0] - int(inst.width / 2) + int(inst.width * 0.625),
+            loc[1] + int(inst.height / 2)
+        )
         show_demo_text(
             ("For the next set of trials you will be given feedback on the accuracy of "
-             "your responses.\nPlease try to respond as accurately as possible!"),
-            [(self.fixation, P.screen_c)], msg_y = int(P.screen_y * 0.35), duration=2.0
+             "your responses."),
+            [(self.fixation, P.screen_c), (inst, loc)],
+            msg_y = int(P.screen_y * 0.32), duration=2.0
         )
         show_demo_text(
             ("When you respond correctly, you will be shown a green circle."),
@@ -470,13 +481,18 @@ class ExoInstructions(klibs.Experiment):
 
 
     def show_rt_instructions(self):
+        inst = message(
+            "Please try to respond as quickly as possible (without guessing)!",
+            style="emph"
+        )
+        loc = (P.screen_c[0], int(P.screen_y * 0.32 + inst.height * 2))
         rt_feedback = [(message("374", style="feedback"), P.screen_c)]
         rt_err_feedback = [(message("259", style="err"), P.screen_c)]
         show_demo_text(
             ("For the next set of trials you will be given feedback on the speed of "
-             "your responses.\nPlease try to respond as quickly as possible without "
-             "guessing!"),
-            [(self.fixation, P.screen_c)], msg_y = int(P.screen_y * 0.35), duration=2.0
+             "your responses."),
+            [(self.fixation, P.screen_c), (inst, loc)],
+            msg_y = int(P.screen_y * 0.32), duration=2.0
         )
         show_demo_text(
             ("When you make a response, you will be shown your reaction time (in "
